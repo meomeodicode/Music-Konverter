@@ -1,0 +1,50 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          spotify:
+            client-id: ${SPOTIFY_CLIENT_ID}
+            client-secret: ${SPOTIFY_CLIENT_SECRET}
+            scope: user-read-private,playlist-read-private
+            redirect-uri: ${SPOTIFY_REDIRECT_URI}
+            authorization-grant-type: authorization_code
+            client-name: Spotify
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+        provider:
+          spotify:
+            authorization-uri: https://accounts.spotify.com/authorize
+            token-uri: https://accounts.spotify.com/api/token
+            user-info-uri: https://api.spotify.com/v1/me
+session:
+  store-type: redis
+  redis:
+    flush-mode: on-save
+    namespace: konverter:session
+data:
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+    username: ${REDIS_USERNAME}
+    password: ${REDIS_PASSWORD}
+youtube:
+  api:
+    key: ${YOUTUBE_API_KEY}
+server:
+  port: ${SERVER_PORT:8080}
+custom:
+  callback:
+    url: ${CALLBACK_URL}
+  google:
+    redirect-authen: ${GOOGLE_REDIRECT_URI}
+logging:
+  level:
+    root: INFO
+    com.minh.konverter: DEBUG
+    org.springframework.session: DEBUG
+    io.lettuce.core: DEBUG
+    org.springframework.data.redis: DEBUG
+  file:
+    name: konverter.log
