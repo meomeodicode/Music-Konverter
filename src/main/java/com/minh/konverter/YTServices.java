@@ -32,7 +32,7 @@ public class YTServices {
     @Autowired 
     private RestTemplate restTemplate;
 
-    @Value("${spring.youtube.api.key}")
+    @Value("${youtube.api.key}")
     private String API_KEY;
     
     private final String baseURL = "https://www.googleapis.com/youtube/v3";

@@ -3,6 +3,7 @@ package com.minh.konverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnection;
@@ -17,19 +18,22 @@ import org.springframework.session.web.context.AbstractHttpSessionApplicationIni
 
 @Configuration
 @EnableRedisHttpSession
-public class SessionConfig extends AbstractHttpSessionApplicationInitializer {
-  @Value("${spring.data.redis.host}")
+public class SessionConfig{
+
+  @Value("${redis.host}")
   private String redisHost;
 
-  @Value("${spring.data.redis.port}")
+  @Value("${redis.port}")
   private int redisPort;
-  @Value("${spring.data.redis.username}")
+
+  @Value("${redis.username}")
   private String redisUsername;
 
-  @Value("${spring.data.redis.password}")
+  @Value("${redis.password}")
   private String redisPassword;
 
   @Bean
+  @Primary
   public LettuceConnectionFactory connectionFactory() {
       RedisStandaloneConfiguration redisConfig = new RedisStandaloneConfiguration(redisHost, redisPort);
       redisConfig.setUsername(redisUsername);

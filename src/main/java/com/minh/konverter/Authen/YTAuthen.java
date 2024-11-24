@@ -6,6 +6,7 @@ import com.minh.konverter.StateTracker;
 import com.minh.konverter.YTServices;
 import com.minh.konverter.YouTubeController;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
@@ -25,7 +26,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -35,37 +38,34 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 public class YTAuthen {
-    private Logger logger = LoggerFactory.getLogger(YTAuthen.class);
+    private final Logger logger = LoggerFactory.getLogger(YTAuthen.class);
     
     @Value("${custom.google.redirect-authen}")
     private String redirectUri;
     
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String clientId;
+
     @Value("${spring.security.oauth2.client.registration.google.client-secret}")
     private String clientSecret;
-    private YouTubeController youTubeController;
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-    @Autowired
-    private StateTracker stateTracker;
 
-    @Autowired
-    public YTAuthen(YouTubeController youTubeController) {
-        this.youTubeController = youTubeController;
-    }
+    private final YouTubeController youTubeController;
+    private final StateTracker stateTracker;
     
+    @Autowired
+    public YTAuthen(YouTubeController youTubeController, StateTracker stateTracker) {
+        this.youTubeController = youTubeController;
+        this.stateTracker = stateTracker;
+    }
+
     @GetMapping("/redirectingToYoutube")
-    public void login(HttpServletResponse response, HttpSession session) { 
+    public void login(HttpServletResponse response, HttpSession session) {
         try {
             String state = generateRandomString(16);
             logger.info("Generated state parameter: {}", state);
-            logger.info("Stored state mapping for session: {}", session.getId());
             session.setAttribute("youtube_oauth_state", state);
-            logger.info("Stored state in session with key 'youtube_oauth_state'");
             
             String scope = "https://www.googleapis.com/auth/youtube.force-ssl";
-
             String authorizationUrl = UriComponentsBuilder.fromHttpUrl("https://accounts.google.com/o/oauth2/v2/auth")
                 .queryParam("response_type", "code")
                 .queryParam("client_id", clientId)
@@ -84,53 +84,85 @@ public class YTAuthen {
     }
 
     @GetMapping("/YTCallback")
-    public void handleCallback(
-        @RequestParam String code,
-        @RequestParam String state,
-        HttpSession session,
-        HttpServletResponse response) throws IOException {
-        
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("client_id", clientId);
-        map.add("client_secret", clientSecret);
-        map.add("code", code);
-        map.add("redirect_uri", redirectUri);
-        map.add("grant_type", "authorization_code");
-        
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-        
-        logger.info("Exchanging code for access token...");
-        ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(
-            "https://oauth2.googleapis.com/token",
-            request,
-            Map.class
-        );
-        
-        Map<String, Object> tokenData = tokenResponse.getBody();
-        String accessToken = (String) tokenData.get("access_token");
-        logger.info("Access token received successfully: {}", accessToken.substring(0, 10) + "...");
+    public ResponseEntity<String> handleCallback(
+            @RequestParam("code") String code,
+            @RequestParam("state") String state,
+            HttpSession session,
+            HttpServletRequest request) {
         try {
-            List<Map<String, Object>> tracks = stateTracker.getTracks();
-            
-            if (tracks == null) {
-                logger.error("No tracks found in Redis");
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "No tracks found");
-                return;
+            String storedState = (String) session.getAttribute("youtube_oauth_state");
+            if (!state.equals(storedState)) {
+                logger.error("State parameter mismatch");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid state parameter");
+            }
+
+            String accessToken = exchangeCodeForToken(code);
+            if (accessToken == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to obtain access token");
             }
             
-            logger.info("Successfully retrieved {} tracks from Redis", tracks.size());
-        
-            String name = "Radiohead";
-            String description = "My first project";
-            String privacy = "Private";
-            youTubeController.createPlaylist(accessToken, name, description, privacy, tracks);
+            List<Map<String, Object>> tracks = stateTracker.getTracks();
+            if (tracks == null || tracks.isEmpty()) {
+                logger.error("No tracks found in state tracker");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No tracks found");
+            }
+            
+            logger.info("Retrieved {} tracks from state tracker", tracks.size());
+            
+            return youTubeController.createPlaylist(
+                accessToken,
+                "Transferred from Spotify",
+                "Playlist transferred from Spotify",
+                "private",
+                tracks
+            );
+            
         } catch (Exception e) {
-            logger.error("Error processing tracks", e);
-            throw e;
+            logger.error("Error in callback processing", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error processing callback: " + e.getMessage());
+        }
+    }
+
+    private String exchangeCodeForToken(String code) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            
+            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+            map.add("client_id", clientId);
+            map.add("client_secret", clientSecret);
+            map.add("code", code);
+            map.add("redirect_uri", redirectUri);
+            map.add("grant_type", "authorization_code");
+            
+            HttpEntity<MultiValueMap<String, String>> request = 
+                new HttpEntity<>(map, headers);
+            
+            logger.info("Exchanging code for access token...");
+            ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(
+                "https://oauth2.googleapis.com/token",
+                request,
+                Map.class
+            );
+            
+            Map<String, Object> tokenData = tokenResponse.getBody();
+            if (tokenData != null) {
+                String accessToken = (String) tokenData.get("access_token");
+                if (accessToken != null) {
+                    logger.info("Access token received successfully: {}...", 
+                        accessToken.substring(0, 10));
+                    return accessToken;
+                }
+            }
+            
+            logger.error("Failed to extract access token from response");
+            return null;
+        } catch (Exception e) {
+            logger.error("Error exchanging code for token", e);
+            return null;
         }
     }
 
@@ -140,6 +172,5 @@ public class YTAuthen {
         secureRandom.nextBytes(randomBytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
-    
 }
 

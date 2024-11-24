@@ -23,23 +23,22 @@ public class YouTubeController {
     public YouTubeController(YTServices youtubeService) {
         this.youtubeService = youtubeService;
     }
+
     @PostMapping("/prepareTransfer")
     public ResponseEntity<String> createPlaylist(
-            @RequestParam String accessToken,  
-            @RequestParam String name,
-            @RequestParam String description,
-            @RequestParam(defaultValue = "private") String privacy,
+            @RequestParam("accessToken") String accessToken,
+            @RequestParam("name") String name,
+            @RequestParam("description") String description,
+            @RequestParam(value = "privacy", defaultValue = "private") String privacy,
             @RequestBody List<Map<String, Object>> tracks) {
         try {
-            if (accessToken == null) {
-                logger.error("No YouTube access token found in session");
+            if (accessToken == null || accessToken.isEmpty()) {
+                logger.error("No YouTube access token provided");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("No YouTube access token found. Please authenticate first.");
             }
             
-            logger.info("Retrieved access token from session: {}...", accessToken.substring(0, 10));
-            logger.info("Creating YouTube playlist: {}", name);
-            
+            logger.info("Creating YouTube playlist: {} with {} tracks", name, tracks.size());
             youtubeService.createPlaylist(accessToken, name, description, privacy, tracks);
             return ResponseEntity.ok("Playlist created successfully");
         } catch (Exception e) {
@@ -49,4 +48,5 @@ public class YouTubeController {
         }
     }
 }
+
 

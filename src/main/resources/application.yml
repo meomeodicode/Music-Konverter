@@ -23,8 +23,7 @@ session:
   redis:
     flush-mode: on-save
     namespace: konverter:session
-data:
-  redis:
+redis:
     host: ${REDIS_HOST}
     port: ${REDIS_PORT}
     username: ${REDIS_USERNAME}
@@ -45,6 +44,6 @@ logging:
     com.minh.konverter: DEBUG
     org.springframework.session: DEBUG
     io.lettuce.core: DEBUG
-    org.springframework.data.redis: DEBUG
+    org.springframework.redis: DEBUG
   file:
     name: konverter.log
