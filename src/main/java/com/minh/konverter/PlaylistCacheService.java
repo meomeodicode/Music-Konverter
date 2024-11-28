@@ -1,33 +1,16 @@
 package com.minh.konverter;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisPassword;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class PlaylistCacheService {
@@ -38,10 +21,10 @@ public class PlaylistCacheService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final Logger logger = LoggerFactory.getLogger(PlaylistCacheService.class);
 
-    @Value("${redis.playlist.ttl:3600}") // 1 hour default for playlists
+    @Value("${redis.playlist.ttl:3600}")
     private long playlistTtl;
 
-    @Value("${redis.track.ttl:86400}") // 24 hours default for individual tracks
+    @Value("${redis.track.ttl:86400}")
     private long trackTtl;
 
     @Value("${redis.max.retry:3}")
@@ -54,15 +37,12 @@ public class PlaylistCacheService {
     public Optional<List<Map<String, Object>>> getCachedPlaylistTracks(String playlistId) {
         String trackSetKey = generateTrackSetKey(playlistId);
         try {
-            // First, try to get the set of track IDs for this playlist
             @SuppressWarnings("unchecked")
             Set<String> trackIds = (Set<String>) redisTemplate.opsForValue().get(trackSetKey);
-            
             if (trackIds == null || trackIds.isEmpty()) {
                 return Optional.empty();
             }
 
-            // Fetch all tracks from their individual cache entries
             List<Map<String, Object>> tracks = new ArrayList<>();
             Set<String> missingTrackIds = new HashSet<>();
 
@@ -75,12 +55,10 @@ public class PlaylistCacheService {
                 }
             }
 
-            // If all tracks were found, return them
             if (missingTrackIds.isEmpty()) {
                 return Optional.of(tracks);
             }
             
-            // If some tracks are missing, return empty to trigger a full refresh
             return Optional.empty();
             
         } catch (Exception e) {
@@ -95,11 +73,10 @@ public class PlaylistCacheService {
                 @Override
                 public Object execute(RedisOperations operations) throws DataAccessException {
                     operations.multi();
-                    
-                    // Cache individual tracks and collect their IDs
                     Set<String> trackIds = new HashSet<>();
                     for (Map<String, Object> track : tracks) {
                         String trackId = (String) track.get("id");
+                        //miss cache
                         if (trackId != null) {
                             String trackKey = generateTrackKey(trackId);
                             operations.opsForValue().set(trackKey, track);
@@ -108,7 +85,6 @@ public class PlaylistCacheService {
                         }
                     }
 
-                    // Cache the set of track IDs for this playlist
                     String trackSetKey = generateTrackSetKey(playlistId);
                     operations.opsForValue().set(trackSetKey, trackIds);
                     operations.expire(trackSetKey, playlistTtl, TimeUnit.SECONDS);
@@ -151,16 +127,12 @@ public class PlaylistCacheService {
                 @Override
                 public Object execute(RedisOperations operations) throws DataAccessException {
                     operations.multi();
-                    
-                    // Get track IDs before deleting
                     String trackSetKey = generateTrackSetKey(playlistId);
+
                     @SuppressWarnings("unchecked")
                     Set<String> trackIds = (Set<String>) operations.opsForValue().get(trackSetKey);
-                    
-                    // Delete track set
                     operations.delete(trackSetKey);
                     
-                    // Delete individual tracks if they exist
                     if (trackIds != null) {
                         for (String trackId : trackIds) {
                             operations.delete(generateTrackKey(trackId));
@@ -184,7 +156,6 @@ public class PlaylistCacheService {
         return TRACK_SET_PREFIX + playlistId;
     }
 
-    // Existing methods remain unchanged
     private String generatePlaylistKey(String playlistId) {
         return PLAYLIST_KEY_PREFIX + playlistId;
     }

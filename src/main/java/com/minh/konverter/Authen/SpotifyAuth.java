@@ -21,13 +21,12 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Base64;
-import java.util.Map;
 import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/")
-public class SpotifyAuthController {
-    private static final Logger logger = LoggerFactory.getLogger(SpotifyAuthController.class);
+public class SpotifyAuth {
+    private static final Logger logger = LoggerFactory.getLogger(SpotifyAuth.class);
 
     @Value("${spring.security.oauth2.client.registration.spotify.client-id}")
     private String clientId;

@@ -26,9 +26,6 @@ import java.util.HashMap;
 
 @Service
 public class YTServices {
-    @Autowired
-    private SpotifyPlaylistController getSPTracks;
-    
     @Autowired 
     private RestTemplate restTemplate;
 

@@ -3,7 +3,6 @@ package com.minh.konverter.Authen;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.minh.konverter.StateTracker;
-import com.minh.konverter.YTServices;
 import com.minh.konverter.YouTubeController;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,22 +22,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
-public class YTAuthen {
-    private final Logger logger = LoggerFactory.getLogger(YTAuthen.class);
+public class YoutubeAuth {
+    private final Logger logger = LoggerFactory.getLogger(YoutubeAuth.class);
     
     @Value("${custom.google.redirect-authen}")
     private String redirectUri;
@@ -53,7 +49,7 @@ public class YTAuthen {
     private final StateTracker stateTracker;
     
     @Autowired
-    public YTAuthen(YouTubeController youTubeController, StateTracker stateTracker) {
+    public YoutubeAuth(YouTubeController youTubeController, StateTracker stateTracker) {
         this.youTubeController = youTubeController;
         this.stateTracker = stateTracker;
     }

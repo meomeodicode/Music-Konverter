@@ -7,19 +7,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
-import com.minh.konverter.PlaylistCacheService;
 
 @RestController
 @RequestMapping("/")
@@ -66,19 +62,15 @@ public class SpotifyPlaylistController {
         }
 
         try {
-            // First, try to get tracks from cache
             Optional<List<Map<String, Object>>> cachedTracks = cacheService.getCachedPlaylistTracks(playlistId);
-            
             if (cachedTracks.isPresent()) {
                 logger.info("Cache hit for playlist: {}", playlistId);
                 return ResponseEntity.ok(cachedTracks.get());
             }
 
-            // If not in cache, fetch from Spotify API
             logger.info("Cache miss for playlist: {}, fetching from Spotify API", playlistId);
             List<Map<String, Object>> tracks = spotifyService.getSpotifyTracks(playlistId, accessToken);
             
-            // Cache the results
             cacheService.cachePlaylistTracks(playlistId, tracks);
             logger.info("Successfully cached tracks for playlist: {}", playlistId);
             

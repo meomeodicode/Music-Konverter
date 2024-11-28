@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import com.minh.konverter.Authen.YTAuthen;
+import com.minh.konverter.Authen.YoutubeAuth;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +17,7 @@ import java.util.Map;
 @Component
 public class StateTracker {
     private final RedisTemplate<String, Object> redisTemplate;
-    private Logger logger = LoggerFactory.getLogger(YTAuthen.class);
+    private Logger logger = LoggerFactory.getLogger(YoutubeAuth.class);
     private static final String TRACKS_KEY = "spotify:tracks"; 
     private static final long TRACKS_EXPIRATION = 1; 
     
