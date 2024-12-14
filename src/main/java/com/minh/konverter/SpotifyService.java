@@ -24,8 +24,6 @@ public class SpotifyService {
     @Autowired
     private StateTracker stateTracker;
 
-    private final List<Map<String, Object>> allTracks = new ArrayList<>();
-
     public List<Map<String, Object>> getUserPlaylists(String accessToken) {
         try {
             String url = "https://api.spotify.com/v1/me/playlists";
@@ -52,6 +50,7 @@ public class SpotifyService {
 
     public List<Map<String, Object>> getSpotifyTracks(String playlistID, String accessToken) {
         try {
+            List<Map<String, Object>> allTracks = new ArrayList<>();
             String url = "https://api.spotify.com/v1/playlists/" + playlistID + "/tracks";
             while (url != null) {
                 HttpHeaders headers = new HttpHeaders();
