@@ -9,7 +9,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -26,8 +25,7 @@ import java.util.HashMap;
 
 @Service
 public class YTServices {
-    @Autowired 
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Value("${youtube.api.key}")
     private String API_KEY;
@@ -36,13 +34,13 @@ public class YTServices {
 
     private static final Logger logger = LoggerFactory.getLogger(YTServices.class);
     
-    @Autowired
     public YTServices(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
     
     public void createPlaylist(String accessToken, String name, String description, 
                              String privacy, List<Map<String,Object>> tracks) {
+        logger.info("=== createPlaylist service started with {} tracks ===", tracks.size());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
@@ -113,19 +111,18 @@ public class YTServices {
 
     private String searchVideo(String accessToken, Map<String,Object> trackInfo) {
         try {
-            String encodedTrackInfo = URLEncoder.encode(formatTrackInfo(trackInfo), StandardCharsets.UTF_8.toString());
-            String url = UriComponentsBuilder.fromHttpUrl(baseURL + "/search")
-                .queryParam("key", API_KEY)
-                .queryParam("part", "snippet")
-                .queryParam("maxResults", 1)
-                .queryParam("q", encodedTrackInfo)
-                .queryParam("type", "video")
-                .queryParam("videoCategoryId", "10") 
-                .toUriString();
-
+            String rawQuery = formatTrackInfo(trackInfo);     
+            String url = baseURL + "/search?key=" + API_KEY
+                    + "&part=snippet"
+                    + "&maxResults=1"
+                    + "&q=" + rawQuery
+                    + "&type=video"
+                    + "&videoCategoryId=10";
+            logger.info("Url raw: {}", url);
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             Map<String, Object> responseBody = response.getBody();
-            
+            logger.info("API Response: {}", responseBody);
+    
             if (responseBody != null && responseBody.containsKey("items")) {
                 List<Map<String, Object>> items = (List<Map<String, Object>>) responseBody.get("items");
                 if (!items.isEmpty()) {
@@ -138,12 +135,14 @@ public class YTServices {
         }
         return null;
     }
-
     private String formatTrackInfo(Map<String,Object> trackInfo) {
         String trackName = (String) trackInfo.get("trackName");
         Object[] artists = (Object[]) trackInfo.get("artistNames");
         String artistName = artists != null && artists.length > 0 ? artists[0].toString() : "";
-        
-        return String.format("%s %s official", trackName, artistName);
+        logger.info(trackName + artistName);
+        String result = String.format("%s %s", trackName, artistName);
+        logger.info("Here are songs: {}", result);
+
+        return result;
     }
 } 
