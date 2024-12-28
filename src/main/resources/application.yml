@@ -18,6 +18,16 @@ spring:
             authorization-uri: https://accounts.spotify.com/authorize
             token-uri: https://accounts.spotify.com/api/token
             user-info-uri: https://api.spotify.com/v1/me
+  datasource:
+    url: jdbc:postgresql://localhost:5432/Konverter
+    username: postgres
+    password: ${POSTGRESQL_PASS}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 session:
   store-type: redis
   redis:
