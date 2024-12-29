@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +20,6 @@ public class StateTracker {
     private static final String TRACKS_KEY = "spotify:tracks"; 
     private static final long TRACKS_EXPIRATION = 1; 
     
-    @Autowired
     public StateTracker(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
