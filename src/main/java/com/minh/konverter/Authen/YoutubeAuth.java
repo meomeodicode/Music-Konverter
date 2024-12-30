@@ -10,11 +10,8 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
@@ -68,7 +65,6 @@ public class YoutubeAuth {
                 .queryParam("access_type", "offline")
                 .build()
                 .toUriString();
-
             logger.info("Redirecting to Google with state: {}", state);
             response.sendRedirect(authorizationUrl);
         } catch (IOException e) {
@@ -98,6 +94,7 @@ public class YoutubeAuth {
             }
 
             String accessToken = exchangeCodeForToken(code);
+            logger.info("YT access token {}:", accessToken);
             if (accessToken == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to obtain access token");
@@ -150,7 +147,7 @@ public class YoutubeAuth {
                 String accessToken = (String) tokenData.get("access_token");
                 if (accessToken != null) {
                     logger.info("Access token received successfully: {}...", 
-                        accessToken.substring(0, 10));
+                        accessToken);
                     return accessToken;
                 }
             }
