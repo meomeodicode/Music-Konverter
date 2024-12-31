@@ -47,15 +47,12 @@ public class TestController {
             @RequestParam("youtubePlaylistId") String youtubePlaylistId,
             @RequestParam("playlistName") String playlistName) {
         try {
-            // Get tracks from YouTube
             List<Map<String, Object>> youtubeTracks = ytServices.getYoutubeTracks(youtubePlaylistId, youtubeAccessToken);
             logger.info("Retrieved {} tracks from YouTube", youtubeTracks.size());
 
-            // Search and get matching Spotify tracks
             List<Map<String, Object>> spotifyTracks = spotifyService.searchSpotifyTracks(spotifyAccessToken, youtubeTracks);
             logger.info("Found {} matching tracks on Spotify", spotifyTracks.size());
 
-            // Create Spotify playlist and add tracks
             spotifyService.createPlaylistAndAddSongs(
                 spotifyAccessToken,
                 playlistName,
