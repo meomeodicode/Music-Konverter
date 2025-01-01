@@ -47,7 +47,9 @@ public class SpotifyAuth {
     public void login(HttpServletResponse response) {
     try {
         String state = generateRandomString(16);
-        String scope = "user-read-private user-read-email playlist-read-private"; 
+        String scope = "user-read-private user-read-email " +
+               "playlist-read-private playlist-modify-private " +
+               "playlist-modify-public"; 
         String authorizationUrl = UriComponentsBuilder.fromHttpUrl("https://accounts.spotify.com/authorize")
             .queryParam("response_type", "code")
             .queryParam("client_id", clientId)

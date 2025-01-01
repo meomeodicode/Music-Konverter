@@ -1,48 +1,156 @@
 package com.minh.konverter;
-
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 @Service
-public class YTServices {
-    @Autowired 
-    private RestTemplate restTemplate;
+    public class YTServices {
+        private static final Logger logger = LoggerFactory.getLogger(YTServices.class);
+        private final RestTemplate restTemplate;
+        private final String baseURL = "https://www.googleapis.com/youtube/v3";
+    
+        @Value("${youtube.api.key}")
+        private String API_KEY;
+        
+        public YTServices(RestTemplate restTemplate) {
+            this.restTemplate = restTemplate;
+        }
+    
+        public Map<String, Object> getPlaylist(String accessToken) {
+            logger.info("Fetching YouTube playlist details");
+            String url = UriComponentsBuilder.fromHttpUrl(baseURL + "/playlists")
+                    .queryParam("key", API_KEY)
+                    .queryParam("part", "snippet")
+                    .queryParam("mine", true)
+                    .toUriString();
+    
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+    
+            try {
+                ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
+                Map<String, Object> responseBody = response.getBody();
+                
+                if (responseBody != null && responseBody.containsKey("items")) {
+                    List<Map<String, Object>> items = (List<Map<String, Object>>) responseBody.get("items");
+                    if (!items.isEmpty()) {
+                        Map<String, Object> snippet = (Map<String, Object>) items.get(0).get("snippet");
+                        return Map.of(
+                            "name", snippet.get("title"),
+                            "description", snippet.getOrDefault("description", ""),
+                            "privacy", "private" 
+                        );
+                    }
+                }
+                throw new RuntimeException("No playlists found for the authenticated user");
+            } catch (Exception e) {
+                logger.error("Failed to fetch YouTube playlist: {}", e.getMessage());
+                throw new RuntimeException("Failed to fetch YouTube playlist", e);
+            }
+        }
+    
+        public List<Map<String, Object>> getYoutubeTracks(String playlistId, String accessToken) {
+            logger.info("Fetching tracks for playlist: {}", playlistId);
+            try {
+                List<Map<String, Object>> allTracks = new ArrayList<>();
+                String nextPageToken = null;
+    
+                do {
+                    Map<String, Object> pageResult = fetchPlaylistPage(playlistId, accessToken, nextPageToken);
+                    List<Map<String, Object>> tracks = extractTracksFromPage(pageResult);
+                    allTracks.addAll(tracks);
+                    
+                    nextPageToken = (String) pageResult.get("nextPageToken");
+                } while (nextPageToken != null);
+    
+                logger.info("Successfully fetched {} tracks from YouTube playlist", allTracks.size());
+                return allTracks;
+            } catch (Exception e) {
+                logger.error("Error fetching YouTube tracks: {}", e.getMessage());
+                throw new RuntimeException("Error fetching YouTube tracks", e);
+            }
+        }
+    
+        private Map<String, Object> fetchPlaylistPage(String playlistId, String accessToken, String pageToken) {
+            UriComponentsBuilder preURL = UriComponentsBuilder.fromHttpUrl(baseURL + "/playlistItems")
+                    .queryParam("key", API_KEY)
+                    .queryParam("part", "snippet")
+                    .queryParam("playlistId", playlistId)
+                    .queryParam("maxResults", 50);
+            
+            String url = "";
+    
+            if (pageToken != null) {
+                url = preURL.queryParam("pageToken", pageToken).toUriString();
+            } else {
+                url = preURL.toUriString();
+            }
+    
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+    
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+    
+            if (response.getBody() == null) {
+                throw new RuntimeException("Received null response from YouTube API");
+            }
+    
+            return response.getBody();
+        }
+    
+        private List<Map<String, Object>> extractTracksFromPage(Map<String, Object> pageData) {
+            List<Map<String, Object>> tracks = new ArrayList<>();
+            List<Map<String, Object>> items = (List<Map<String, Object>>) pageData.get("items");
+            
+            if (items != null) {
+                for (Map<String, Object> item : items) {
+                    Map<String, Object> snippet = (Map<String, Object>) item.get("snippet");
+                    
+                    if (snippet != null) {
+                        try {
+                            tracks.add(extractTrackInfo(snippet));
+                        } catch (Exception e) {
+                            logger.warn("Failed to extract track info: {}", e.getMessage());
+                        }
+                    }
+                }
+            }
+            
+            return tracks;
+        }
+    
+        private Map<String, Object> extractTrackInfo(Map<String, Object> snippet) {
+            return Map.of(
+                "title", snippet.get("title"),
+                "publish", snippet.get("publishedAt")
+            );
+        }
 
-    @Value("${youtube.api.key}")
-    private String API_KEY;
-    
-    private final String baseURL = "https://www.googleapis.com/youtube/v3";
-
-    private static final Logger logger = LoggerFactory.getLogger(YTServices.class);
-    
-    @Autowired
-    public YTServices(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
-    
     public void createPlaylist(String accessToken, String name, String description, 
                              String privacy, List<Map<String,Object>> tracks) {
+        logger.info("=== createPlaylist service started with {} tracks ===", tracks.size());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
@@ -113,19 +221,18 @@ public class YTServices {
 
     private String searchVideo(String accessToken, Map<String,Object> trackInfo) {
         try {
-            String encodedTrackInfo = URLEncoder.encode(formatTrackInfo(trackInfo), StandardCharsets.UTF_8.toString());
-            String url = UriComponentsBuilder.fromHttpUrl(baseURL + "/search")
-                .queryParam("key", API_KEY)
-                .queryParam("part", "snippet")
-                .queryParam("maxResults", 1)
-                .queryParam("q", encodedTrackInfo)
-                .queryParam("type", "video")
-                .queryParam("videoCategoryId", "10") 
-                .toUriString();
-
+            String rawQuery = formatTrackInfo(trackInfo);     
+            String url = baseURL + "/search?key=" + API_KEY
+                    + "&part=snippet"
+                    + "&maxResults=1"
+                    + "&q=" + rawQuery
+                    + "&type=video"
+                    + "&videoCategoryId=10";
+            logger.info("Url raw: {}", url);
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             Map<String, Object> responseBody = response.getBody();
-            
+            logger.info("API Response: {}", responseBody);
+    
             if (responseBody != null && responseBody.containsKey("items")) {
                 List<Map<String, Object>> items = (List<Map<String, Object>>) responseBody.get("items");
                 if (!items.isEmpty()) {
@@ -138,12 +245,14 @@ public class YTServices {
         }
         return null;
     }
-
     private String formatTrackInfo(Map<String,Object> trackInfo) {
         String trackName = (String) trackInfo.get("trackName");
         Object[] artists = (Object[]) trackInfo.get("artistNames");
         String artistName = artists != null && artists.length > 0 ? artists[0].toString() : "";
-        
-        return String.format("%s %s official", trackName, artistName);
+        logger.info(trackName + artistName);
+        String result = String.format("%s %s", trackName, artistName);
+        logger.info("Here are songs: {}", result);
+
+        return result;
     }
-} 
+}

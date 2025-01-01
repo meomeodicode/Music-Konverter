@@ -1,10 +1,8 @@
 package com.minh.konverter.Authen;
 
 import org.springframework.web.util.UriComponentsBuilder;
-
 import com.minh.konverter.StateTracker;
 import com.minh.konverter.YouTubeController;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -14,13 +12,11 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -48,7 +44,6 @@ public class YoutubeAuth {
     private final YouTubeController youTubeController;
     private final StateTracker stateTracker;
     
-    @Autowired
     public YoutubeAuth(YouTubeController youTubeController, StateTracker stateTracker) {
         this.youTubeController = youTubeController;
         this.stateTracker = stateTracker;
@@ -60,7 +55,6 @@ public class YoutubeAuth {
             String state = generateRandomString(16);
             logger.info("Generated state parameter: {}", state);
             session.setAttribute("youtube_oauth_state", state);
-            
             String scope = "https://www.googleapis.com/auth/youtube.force-ssl";
             String authorizationUrl = UriComponentsBuilder.fromHttpUrl("https://accounts.google.com/o/oauth2/v2/auth")
                 .queryParam("response_type", "code")
@@ -71,7 +65,6 @@ public class YoutubeAuth {
                 .queryParam("access_type", "offline")
                 .build()
                 .toUriString();
-
             logger.info("Redirecting to Google with state: {}", state);
             response.sendRedirect(authorizationUrl);
         } catch (IOException e) {
@@ -86,6 +79,14 @@ public class YoutubeAuth {
             HttpSession session,
             HttpServletRequest request) {
         try {
+            if (session.getAttribute("state_used_" + state) != null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("State already used");
+            }
+            session.setAttribute("state_used_" + state, true);
+            logger.info("=== YTCallback started with state: {} ===", state);
+            logger.info("Request URL: {}", request.getRequestURL());
+            logger.info("User Agent: {}", request.getHeader("User-Agent"));
+            logger.info("Request Method: {}", request.getMethod());
             String storedState = (String) session.getAttribute("youtube_oauth_state");
             if (!state.equals(storedState)) {
                 logger.error("State parameter mismatch");
@@ -93,20 +94,17 @@ public class YoutubeAuth {
             }
 
             String accessToken = exchangeCodeForToken(code);
+            logger.info("YT access token {}:", accessToken);
             if (accessToken == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to obtain access token");
             }
-            
             List<Map<String, Object>> tracks = stateTracker.getTracks();
             if (tracks == null || tracks.isEmpty()) {
                 logger.error("No tracks found in state tracker");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No tracks found");
-            }
-            
-            logger.info("Retrieved {} tracks from state tracker", tracks.size());
-            
-            return youTubeController.createPlaylist(
+            }            
+            return youTubeController.playlistController(
                 accessToken,
                 "Transferred from Spotify",
                 "Playlist transferred from Spotify",
@@ -149,11 +147,10 @@ public class YoutubeAuth {
                 String accessToken = (String) tokenData.get("access_token");
                 if (accessToken != null) {
                     logger.info("Access token received successfully: {}...", 
-                        accessToken.substring(0, 10));
+                        accessToken);
                     return accessToken;
                 }
             }
-            
             logger.error("Failed to extract access token from response");
             return null;
         } catch (Exception e) {
@@ -169,4 +166,3 @@ public class YoutubeAuth {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 }
-

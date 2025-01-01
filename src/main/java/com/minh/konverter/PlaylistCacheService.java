@@ -76,7 +76,6 @@ public class PlaylistCacheService {
                     Set<String> trackIds = new HashSet<>();
                     for (Map<String, Object> track : tracks) {
                         String trackId = (String) track.get("id");
-                        //miss cache
                         if (trackId != null) {
                             String trackKey = generateTrackKey(trackId);
                             operations.opsForValue().set(trackKey, track);

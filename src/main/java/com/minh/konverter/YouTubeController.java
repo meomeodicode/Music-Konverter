@@ -2,10 +2,9 @@ package com.minh.konverter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.minh.konverter.Model.Playlist;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,19 +18,18 @@ public class YouTubeController {
     private static final Logger logger = LoggerFactory.getLogger(YouTubeController.class);
     private final YTServices youtubeService;
     
-    @Autowired
     public YouTubeController(YTServices youtubeService) {
         this.youtubeService = youtubeService;
     }
 
-    @PostMapping("/prepareTransfer")
-    public ResponseEntity<String> createPlaylist(
+    public ResponseEntity<String> playlistController(
             @RequestParam("accessToken") String accessToken,
             @RequestParam("name") String name,
             @RequestParam("description") String description,
             @RequestParam(value = "privacy", defaultValue = "private") String privacy,
             @RequestBody List<Map<String, Object>> tracks) {
         try {
+            logger.info("=== playlistController started with {} tracks ===", tracks.size());
             if (accessToken == null || accessToken.isEmpty()) {
                 logger.error("No YouTube access token provided");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

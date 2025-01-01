@@ -36,3 +36,9 @@ out/
 
 ### VS Code ###
 .vscode/
+konverter.log.2024-11-23.0.gz
+konverter.log.2024-11-24.0.gz
+konverter.log.2024-12-28.0.gz
+*.gz
+*.log
+*.gz
