@@ -5,7 +5,6 @@ const Login = () => {
     const navigate = useNavigate(); // React Router's hook for programmatic navigation
 
     const gotoHomepage = () => navigate("/"); // Navigate to the Homepage
-    const goToHome = () => navigate("/home"); // Navigate to home page after login
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-900 bg-opacity-90">
@@ -55,7 +54,6 @@ const Login = () => {
 
                     {/* Sign Up Button */}
                     <button
-                        onClick={goToHome}
                         type="submit"
                         className="w-full mt-6 px-4 py-2 bg-yellow-400 text-gray-900 rounded-md hover:bg-yellow-600 font-bold"
                     >

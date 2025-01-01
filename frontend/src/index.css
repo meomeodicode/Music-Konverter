@@ -6,12 +6,15 @@
 
 .scrollbar::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
 }
-
 .scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 0, 0.5);
+    background: rgba(255, 255, 0, 0.3);
     border-radius: 4px;
 }
 .scrollbar::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0);
+}
+.scrollbar::-webkit-scrollbar-corner {
+  background: rgba(0,0,0,0);
 }

@@ -2,12 +2,13 @@ import { AiFillYoutube } from "react-icons/ai";
 import { AiFillSpotify } from "react-icons/ai";
 import { CiSquareQuestion } from "react-icons/ci";
 import { useNavigate } from "react-router-dom";
+import Footer from "../footer/Footer";
 
 const HomepageBefore = () => {
     const navigate = useNavigate(); // React Router's hook for programmatic navigation
 
     const goToRegister = () => navigate("/register"); // Navigate to the Register page
-    const goToLogin = () => navigate("/login"); // Navigate to the Login page
+    const goToLogin = () => navigate("/signin"); // Navigate to the Login page
 
     return (
         <div className="bg-gray-900 text-white min-h-screen min-w-fit">
@@ -50,11 +51,6 @@ const HomepageBefore = () => {
                 <AiFillYoutube className='text-8xl' />
             </div>
 
-            {/* Help Section */}
-            <div className="fixed bottom-8 right-8 text-5xl text-yellow-400 cursor-pointer hover:text-yellow-600">
-                <CiSquareQuestion />
-            </div>
-
             {/* Introduction Section */}
             <div>
                 <section className="flex flex-col items-center mt-64">
@@ -65,6 +61,14 @@ const HomepageBefore = () => {
                         Movesic is a powerful system that allows users to transfer music playlists between streaming platforms effortlessly. Whether it's moving a Spotify playlist to YouTube Music or identifying background music from a video, Movesic offers a suite of tools to streamline the process. The platform is aimed at a wide variety of users, from casual music lovers to long-time subscribers looking for more control over their music libraries. Movesic is designed to compete with similar tools by offering a unique blend of features not available in one package elsewhere.
                     </p>
                 </section>
+            </div>
+
+            {/* Footer Section */}
+            <Footer />
+
+            {/* Help Section */}
+            <div className="fixed bottom-8 right-8 text-5xl text-yellow-400 cursor-pointer hover:text-yellow-600">
+                <CiSquareQuestion />
             </div>
         </div>
     );

@@ -191,11 +191,10 @@ public class SpotifyService {
             logger.info("Sending request to Spotify API: {}", url);
 
             ResponseEntity<Map> response = restTemplate.exchange(
-                url, 
-                HttpMethod.GET, 
-                new HttpEntity<>(headers), 
-                Map.class
-            );
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    Map.class);
 
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) response.getBody().get("items");
@@ -216,11 +215,11 @@ public class SpotifyService {
                 HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
                 ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    requestEntity,
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
-                );
+                        url,
+                        HttpMethod.GET,
+                        requestEntity,
+                        new ParameterizedTypeReference<Map<String, Object>>() {
+                        });
 
                 Map<String, Object> response = responseEntity.getBody();
                 if (response == null) {
@@ -245,16 +244,20 @@ public class SpotifyService {
     }
 
     private Map<String, Object> extractTrackInfo(Map<String, Object> track) {
+        List<Map<String, Object>> albumImages = (List<Map<String, Object>>) ((Map<String, Object>) track.get("album"))
+                .get("images");
+        String thumbnailUrl = albumImages != null && !albumImages.isEmpty() ? (String) albumImages.get(0).get("url")
+                : null;
         return Map.of(
-            "trackId", track.get("id"),
-            "trackName", extractSongName((String) track.get("name")),
-            "artistNames", ((List<Map<String, Object>>) track.get("artists"))
-                .stream()
-                .map(artist -> artist.get("name"))
-                .toArray(),
-            "albumName", ((Map<String, Object>) track.get("album")).get("name"),
-            "duration", track.get("duration_ms")
-        );
+                "trackId", track.get("id"),
+                "trackName", extractSongName((String) track.get("name")),
+                "artistNames", ((List<Map<String, Object>>) track.get("artists"))
+                        .stream()
+                        .map(artist -> artist.get("name"))
+                        .toArray(),
+                "albumName", ((Map<String, Object>) track.get("album")).get("name"),
+                "thumbnailUrl", thumbnailUrl,
+                "duration", track.get("duration_ms"));
     }
 
     private String extractSongName(String songName) {

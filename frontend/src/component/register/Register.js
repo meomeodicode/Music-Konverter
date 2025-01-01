@@ -75,7 +75,7 @@ const Register = () => {
                 {/* Already Have an Account */}
                 <p className="mt-4 text-center text-sm text-gray-400">
                     Already have an account?{" "}
-                    <a href="/login" className="text-yellow-400 hover:underline">
+                    <a href="/signin" className="text-yellow-400 hover:underline">
                         Sign in
                     </a>
                 </p>
