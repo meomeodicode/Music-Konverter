@@ -5,7 +5,6 @@ import java.util.Optional;
 import java.util.List;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,12 +16,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/spotify")
 public class SpotifyPlaylistController {
     private static final Logger logger = LoggerFactory.getLogger(SpotifyPlaylistController.class);
     private final SpotifyService spotifyService;
     private final PlaylistCacheService cacheService;
-    
+
     public SpotifyPlaylistController(SpotifyService spotifyService, PlaylistCacheService cacheService) {
         this.spotifyService = spotifyService;
         this.cacheService = cacheService;
@@ -52,7 +51,7 @@ public class SpotifyPlaylistController {
     public ResponseEntity<List<Map<String, Object>>> getPlaylistTracks(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable("playlistId") String playlistId) {
-        
+
         String accessToken = extractAccessToken(authHeader);
         if (accessToken == null) {
             logger.warn("Access token not provided");
@@ -68,10 +67,10 @@ public class SpotifyPlaylistController {
 
             logger.info("Cache miss for playlist: {}, fetching from Spotify API", playlistId);
             List<Map<String, Object>> tracks = spotifyService.getSpotifyTracks(playlistId, accessToken);
-            
+
             cacheService.cachePlaylistTracks(playlistId, tracks);
             logger.info("Successfully cached tracks for playlist: {}", playlistId);
-            
+
             return ResponseEntity.ok(tracks);
         } catch (Exception e) {
             logger.error("Error retrieving playlist tracks for playlist: {}", playlistId, e);
@@ -98,6 +97,3 @@ public class SpotifyPlaylistController {
         return null;
     }
 }
-
-
-

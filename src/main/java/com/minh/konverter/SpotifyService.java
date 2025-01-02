@@ -29,22 +29,21 @@ public class SpotifyService {
     @Autowired
     private StateTracker stateTracker;
 
- public String getCurrentSpotifyUser(String accessToken) {
+    public String getCurrentSpotifyUser(String accessToken) {
         logger.info("Getting current Spotify user");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
-        
+
         String url = "https://api.spotify.com/v1/me";
         HttpEntity<Void> request = new HttpEntity<>(headers);
-        
+
         try {
             ResponseEntity<Map> responseEntity = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                request,
-                Map.class
-            );
+                    url,
+                    HttpMethod.GET,
+                    request,
+                    Map.class);
             String userId = (String) responseEntity.getBody().get("id");
             if (userId == null) {
                 logger.error("Could not retrieve Spotify user ID");
@@ -60,15 +59,15 @@ public class SpotifyService {
     private String formatTrackForSearch(Map<String, Object> youtubeTrack) {
         String title = (String) youtubeTrack.get("title");
         String artist = (String) youtubeTrack.get("artist");
-        
+
         if (title != null) {
             title = title.replaceAll("(?i)(\\(Official.*?\\))|(\\[Official.*?\\])|" +
-                                   "(\\(Lyric.*?\\))|(\\[Lyric.*?\\])|" +
-                                   "(\\(Audio.*?\\))|(\\[Audio.*?\\])|" +
-                                   "(\\(Music.*?\\))|(\\[Music.*?\\])", "")
-                        .trim();
+                    "(\\(Lyric.*?\\))|(\\[Lyric.*?\\])|" +
+                    "(\\(Audio.*?\\))|(\\[Audio.*?\\])|" +
+                    "(\\(Music.*?\\))|(\\[Music.*?\\])", "")
+                    .trim();
         }
-        
+
         if (artist != null && !artist.isEmpty()) {
             return String.format("%s %s", title, artist);
         } else {
@@ -80,40 +79,40 @@ public class SpotifyService {
         List<Map<String, Object>> spotifyTracks = new ArrayList<>();
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
-        
+
         for (Map<String, Object> youtubeTrack : youtubeTracks) {
             String searchQuery = formatTrackForSearch(youtubeTrack);
             try {
                 String url = UriComponentsBuilder.fromHttpUrl("https://api.spotify.com/v1/search")
-                    .queryParam("q", searchQuery)
-                    .queryParam("type", "track")
-                    .queryParam("limit", 1)  
-                    .toUriString();
+                        .queryParam("q", searchQuery)
+                        .queryParam("type", "track")
+                        .queryParam("limit", 1)
+                        .toUriString();
 
                 HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
                 logger.info("Searching Spotify for track: {}", searchQuery);
-                
+
                 ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
                 Map<String, Object> responseBody = response.getBody();
-                
+
                 if (responseBody != null && responseBody.containsKey("tracks")) {
                     Map<String, Object> tracksMap = (Map<String, Object>) responseBody.get("tracks");
                     List<Map<String, Object>> items = (List<Map<String, Object>>) tracksMap.get("items");
-                    
+
                     if (!items.isEmpty()) {
                         spotifyTracks.add(items.get(0));
                     } else {
                         logger.warn("No Spotify match found for: {}", searchQuery);
                     }
                 }
-                
+
                 Thread.sleep(100);
-                
+
             } catch (Exception e) {
                 logger.error("Error searching for track: {}", searchQuery, e);
             }
         }
-        
+
         return spotifyTracks;
     }
 
@@ -128,19 +127,19 @@ public class SpotifyService {
         headers.setBearerAuth(accessToken);
 
         List<String> trackUris = tracks.stream()
-            .map(track -> (String) track.get("uri"))
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+                .map(track -> (String) track.get("uri"))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
         for (int i = 0; i < trackUris.size(); i += 100) {
             int endIndex = Math.min(i + 100, trackUris.size());
             List<String> batch = trackUris.subList(i, endIndex);
-            
+
             Map<String, Object> requestBody = Map.of("uris", batch);
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-            
+
             String url = String.format("https://api.spotify.com/v1/playlists/%s/tracks", playlistId);
-            
+
             try {
                 restTemplate.exchange(url, HttpMethod.POST, request, Map.class);
                 logger.info("Added batch of {} tracks to playlist", batch.size());
@@ -151,26 +150,25 @@ public class SpotifyService {
         }
     }
 
-    public void createPlaylistAndAddSongs(String accessToken, String name, String description, 
-                                        String privacy, List<Map<String, Object>> spotifyTracks) {
+    public void createPlaylistAndAddSongs(String accessToken, String name, String description,
+            String privacy, List<Map<String, Object>> spotifyTracks) {
         String userId = getCurrentSpotifyUser(accessToken);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
-        
+
         Map<String, Object> requestBody = Map.of(
-            "name", name,
-            "description", description,
-            "public", "public".equalsIgnoreCase(privacy)
-        );
+                "name", name,
+                "description", description,
+                "public", "public".equalsIgnoreCase(privacy));
 
         String createUrl = String.format("https://api.spotify.com/v1/users/%s/playlists", userId);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        
+
         try {
             ResponseEntity<Map> response = restTemplate.exchange(createUrl, HttpMethod.POST, request, Map.class);
             Map<String, Object> responseBody = response.getBody();
-            
+
             if (responseBody != null && responseBody.containsKey("id")) {
                 String playlistId = (String) responseBody.get("id");
                 addTracksToPlaylist(accessToken, playlistId, spotifyTracks);
@@ -180,7 +178,6 @@ public class SpotifyService {
             throw new RuntimeException("Failed to create Spotify playlist: " + e.getMessage(), e);
         }
     }
-
 
     public List<Map<String, Object>> getUserPlaylists(String accessToken) {
         try {

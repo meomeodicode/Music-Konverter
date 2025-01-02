@@ -16,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.slf4j.Logger;
- 
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -45,69 +44,70 @@ public class SpotifyAuth {
 
     @GetMapping("/login")
     public void login(HttpServletResponse response) {
-    try {
-        String state = generateRandomString(16);
-        String scope = "user-read-private user-read-email " +
-               "playlist-read-private playlist-modify-private " +
-               "playlist-modify-public"; 
-        String authorizationUrl = UriComponentsBuilder.fromHttpUrl("https://accounts.spotify.com/authorize")
-            .queryParam("response_type", "code")
-            .queryParam("client_id", clientId)
-            .queryParam("scope", scope)  
-            .queryParam("redirect_uri", redirectUri)
-            .queryParam("state", state)
-            .build()
-            .toUriString();
-        logger.info("Redirecting to Spotify: {}", authorizationUrl);
-        response.sendRedirect(authorizationUrl);
-    } catch (IOException e) {
-        logger.error("Error during Spotify login redirect", e);
-    }
-}
-
-
-@GetMapping("/callback")
-public void callback(@RequestParam("code") String code, @RequestParam("state") String state, HttpServletResponse response) {
-    logger.info("=== Starting Spotify OAuth2 callback ===");
-    try {
-        logger.info("Authorization Code: {}", code);
-        logger.info("State: {}", state);
-        MultiValueMap<String, String> bodyParams = new LinkedMultiValueMap<>();
-        bodyParams.add("code", code);
-        bodyParams.add("redirect_uri", redirectUri); 
-        bodyParams.add("grant_type", "authorization_code");
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        String authHeader = "Basic " + Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes());
-        headers.set("Authorization", authHeader);
-        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(bodyParams, headers);
-        ResponseEntity<String> responseEntity = restTemplate.exchange(
-            tokenUrl, 
-            HttpMethod.POST, 
-            requestEntity, 
-            String.class
-        );
-        logger.info("Response from Spotify Token URL: {}", responseEntity.getBody());
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode jsonResponse = mapper.readTree(responseEntity.getBody());
-        String accessToken = jsonResponse.get("access_token").asText();
- 
-        if (accessToken != null) {
-            logger.info("Access Token Retrieved: {}", accessToken);
-            String frontendUri = "http://localhost:3000/playlists?access_token=" + accessToken;
-            logger.info("Redirecting to frontend: {}", frontendUri);
-            response.sendRedirect(frontendUri);
-        } else {
-            logger.error("Access Token is null.");
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Access token is null.");
+        try {
+            String state = generateRandomString(16);
+            String scope = "user-read-private user-read-email " +
+                    "playlist-read-private playlist-modify-private " +
+                    "playlist-modify-public";
+            String authorizationUrl = UriComponentsBuilder.fromHttpUrl("https://accounts.spotify.com/authorize")
+                    .queryParam("response_type", "code")
+                    .queryParam("client_id", clientId)
+                    .queryParam("scope", scope)
+                    .queryParam("redirect_uri", redirectUri)
+                    .queryParam("state", state)
+                    .build()
+                    .toUriString();
+            logger.info("Redirecting to Spotify: {}", authorizationUrl);
+            response.sendRedirect(authorizationUrl);
+        } catch (IOException e) {
+            logger.error("Error during Spotify login redirect", e);
         }
-    } catch (IOException e) {
-        logger.error("Error redirecting to frontend", e);
-    } catch (Exception e) {
-        logger.error("Error during Spotify OAuth2 callback", e);
     }
-}
 
+    @GetMapping("/callback")
+    public void callback(@RequestParam("code") String code, @RequestParam("state") String state,
+            HttpServletResponse response) {
+        try {
+            MultiValueMap<String, String> bodyParams = new LinkedMultiValueMap<>();
+            bodyParams.add("code", code);
+            bodyParams.add("redirect_uri", redirectUri);
+            bodyParams.add("grant_type", "authorization_code");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("Authorization",
+                    "Basic " + Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes()));
+
+            ResponseEntity<String> responseEntity = restTemplate.exchange(
+                    tokenUrl,
+                    HttpMethod.POST,
+                    new HttpEntity<>(bodyParams, headers),
+                    String.class);
+
+            String accessToken = new ObjectMapper()
+                    .readTree(responseEntity.getBody())
+                    .get("access_token")
+                    .asText();
+
+            if (accessToken != null) {
+                String frontendUri = UriComponentsBuilder.fromHttpUrl("http://localhost:3000/playlists")
+                        .queryParam("service", "spotify")
+                        .queryParam("access_token", accessToken)
+                        .build()
+                        .toUriString();
+                response.sendRedirect(frontendUri);
+            } else {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Access token is null.");
+            }
+        } catch (Exception e) {
+            logger.error("Error during Spotify OAuth2 callback", e);
+            try {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+            } catch (IOException ie) {
+                logger.error("Failed to send error response", ie);
+            }
+        }
+    }
 
     private String generateRandomString(int length) {
         SecureRandom secureRandom = new SecureRandom();

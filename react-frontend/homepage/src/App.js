@@ -12,7 +12,7 @@ class App extends React.Component {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/playlists" element={<Playlists />} />
-            <Route path="/playlist/:playlistId" element={<PlaylistSongs />} />
+            <Route path="/:service/playlists/:playlistId/tracks" element={<PlaylistSongs />} />
           </Routes>
         </Router>
       </main>

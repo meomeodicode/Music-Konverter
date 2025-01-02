@@ -20,19 +20,18 @@ const Playlist_Transfer = () => {
             try {
                 const params = new URLSearchParams(location.search);
                 const token = params.get("access_token");
+                const service = new URLSearchParams(document.location.search).get("service");
+
                 if (token) {
-                    localStorage.setItem("access_token", token);
+                    localStorage.setItem(`${service}_token`, token);
                 }
-                const storedToken = localStorage.getItem("access_token");
+                const storedToken = localStorage.getItem(`${service}_token`);
                 console.log("Access Token:", storedToken);
-                if (!storedToken) {
-                    console.error("No access token available");
-                    return;
-                }
-                const response = await axios.get("http://localhost:8080/playlists", {
-                    headers: {
-                        Authorization: `Bearer ${storedToken}`,
-                    },
+                if (!token) return;
+
+                const endpoint = service === 'spotify' ? '/spotify/playlists' : '/youtube/playlists';
+                const response = await axios.get(`http://localhost:8080${endpoint}`, {
+                    headers: { Authorization: `Bearer ${token}` }
                 });
                 const validPlaylists = response.data.filter((playlist) => playlist && playlist.id);
                 setPlaylists(validPlaylists);
@@ -46,17 +45,22 @@ const Playlist_Transfer = () => {
     // Fetch songs for a specific playlist
     const fetchSongs = async (playlistId) => {
         try {
-            const token = localStorage.getItem("access_token");
+            const service = new URLSearchParams(document.location.search).get("service");
+            const token = localStorage.getItem(`${service}_token`);
+
             if (!token) {
                 console.error("No access token available");
                 return;
             }
-            const response = await axios.get(`http://localhost:8080/playlists/${playlistId}/tracks`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+
+            const endpoint = service === 'spotify'
+                ? `/spotify/playlists/${playlistId}/tracks`
+                : `/youtube/playlists/${playlistId}/tracks`;
+            const response = await axios.get(`http://localhost:8080${endpoint}`, {
+                headers: { Authorization: `Bearer ${token}` }
             });
             setSongs(response.data);
+
         } catch (error) {
             console.error("Error fetching songs:", error);
         }

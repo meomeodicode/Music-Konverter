@@ -3,7 +3,7 @@ import thumbnail from "./resources/music.jpg";
 
 const Home = () => {
   const handleAuthorization = () => {
-    window.location.href = "http://localhost:8080/login";
+    window.location.href = "http://localhost:8080/redirectingToYoutube";
   };
   return (
     <section className="landing-page">
