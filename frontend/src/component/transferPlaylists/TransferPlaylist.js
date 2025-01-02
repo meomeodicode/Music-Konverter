@@ -6,12 +6,12 @@ import { CiSquareQuestion } from "react-icons/ci";
 import { PiPlaylistDuotone } from "react-icons/pi";
 import { FaExchangeAlt } from "react-icons/fa";
 
-
 const Playlist_Transfer = () => {
     const [playlists, setPlaylists] = useState([]);
     const [selectedPlaylist, setSelectedPlaylist] = useState(null);
     const [songs, setSongs] = useState([]);
     const containerRef = useRef(null);
+    const songsContainerRef = useRef(null); // Ref for the songs section
     const location = useLocation();
 
     // Fetch playlists
@@ -66,6 +66,11 @@ const Playlist_Transfer = () => {
     const handlePlaylistClick = (playlist) => {
         setSelectedPlaylist(playlist);
         fetchSongs(playlist.id);
+
+        // Scroll songs container to top
+        if (songsContainerRef.current) {
+            songsContainerRef.current.scrollTop = 0;
+        }
     };
 
     const handleTransferClick = () => {
@@ -148,7 +153,7 @@ const Playlist_Transfer = () => {
 
                 {/* Songs Section */}
                 {selectedPlaylist && (
-                    <div className="overflow-y-scroll scrollbar w-2/3 bg-gray-700 rounded-lg p-4 ml-4">
+                    <div ref={songsContainerRef} className="overflow-y-scroll scrollbar w-2/3 bg-gray-700 rounded-lg p-4 ml-4">
                         <h2 className="text-2xl font-bold mb-4">{selectedPlaylist.name}</h2>
                         <ul>
                             {songs.length > 0 ? (
