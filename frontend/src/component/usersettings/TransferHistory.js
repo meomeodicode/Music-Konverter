@@ -4,26 +4,18 @@ const TransferHistory = () => {
     // Dummy transfer data
     const [transfers, setTransfers] = useState([
         {
-            title: "My Favorite Songs",
+            title: "1 song playlist",
             type: "Playlist",
             source: "Spotify",
             destination: "YouTube Music",
-            finished: "12/29/2024 7:53 PM",
+            finished: "01/03/2025",
         },
     ]);
     const [selectedPlaylist, setSelectedPlaylist] = useState(null);
 
     // Dummy data for playlist songs
     const dummyPlaylistSongs = [
-        "Song 1 - Artist A",
-        "Song 2 - Artist B",
-        "Song 3 - Artist C",
-        "Song 3 - Artist C",
-        "Song 3 - Artist C",
-        "Song 2 - Artist B",
-        "Song 3 - Artist C",
-        "Song 3 - Artist C",
-        "Song 3 - Artist C",
+        "Faded - Alan Walker"
     ];
 
     const closeModal = () => {

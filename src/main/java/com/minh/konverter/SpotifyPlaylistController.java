@@ -2,9 +2,13 @@ package com.minh.konverter;
 
 import java.util.Map;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.minh.konverter.Repository.PlaylistRepository;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -14,7 +18,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import com.minh.konverter.Model.Playlist;
+import com.minh.konverter.Repository.PlaylistRepository;
+
 
 @RestController
 @RequestMapping("/")
@@ -22,10 +31,12 @@ public class SpotifyPlaylistController {
     private static final Logger logger = LoggerFactory.getLogger(SpotifyPlaylistController.class);
     private final SpotifyService spotifyService;
     private final PlaylistCacheService cacheService;
+    private final PlaylistRepository playlistRepository;
     
-    public SpotifyPlaylistController(SpotifyService spotifyService, PlaylistCacheService cacheService) {
+    public SpotifyPlaylistController(SpotifyService spotifyService, PlaylistCacheService cacheService, PlaylistRepository playlistRepository) {
         this.spotifyService = spotifyService;
         this.cacheService = cacheService;
+        this.playlistRepository = playlistRepository;
     }
 
     @GetMapping("/playlists")
@@ -40,13 +51,29 @@ public class SpotifyPlaylistController {
 
         try {
             List<Map<String, Object>> playlists = spotifyService.getUserPlaylists(accessToken);
-            logger.info("Successfully retrieved user playlists");
+
+            // Save playlists to the database
+            playlists.forEach(playlistData -> {
+                try {
+                    Playlist playlist = new Playlist();
+                    playlist.setTitle((String) playlistData.get("name"));
+                    playlist.setPlatform("Spotify");
+                    playlist.setUserId(1L); // Hardcoded user ID for demo purposes
+                    playlist.setCreatedAt(LocalDateTime.now());
+                    playlistRepository.save(playlist);
+                } catch (Exception e) {
+                    logger.error("Error saving playlist to the database", e);
+                }
+            });
+
+            logger.info("Successfully retrieved and saved user playlists");
             return ResponseEntity.ok(playlists);
         } catch (Exception e) {
             logger.error("Error retrieving playlists", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
 
     @GetMapping("/playlists/{playlistId}/tracks")
     public ResponseEntity<List<Map<String, Object>>> getPlaylistTracks(
@@ -97,7 +124,26 @@ public class SpotifyPlaylistController {
         }
         return null;
     }
+
+    @PostMapping("/save-playlists")
+    public ResponseEntity<String> savePlaylists(@RequestBody List<Map<String, Object>> playlists, @RequestParam Long userId) {
+        try {
+            for (Map<String, Object> playlistData : playlists) {
+                String title = (String) playlistData.get("title");
+                String platform = "Spotify";
+                if (!playlistRepository.existsByTitleAndPlatformAndUserId(title, platform, userId)) {
+                    Playlist playlist = new Playlist();
+                    playlist.setTitle(title);
+                    playlist.setPlatform(platform);
+                    playlist.setUserId(userId);
+                    playlist.setCreatedAt(LocalDateTime.now());
+                    playlistRepository.save(playlist);
+                }
+            }
+            return ResponseEntity.ok("Playlists saved successfully");
+        } catch (Exception e) {
+            logger.error("Error saving playlists", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to save playlists");
+        }
+    }
 }
-
-
-

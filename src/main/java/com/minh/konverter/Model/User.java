@@ -40,11 +40,11 @@ public class User {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    public Long getId() {
+    public Long getUid() {
         return uid;
     }
 
-    public void setId(Long id) {
+    public void setUid(Long id) {
         this.uid = id;
     }
 
@@ -87,4 +87,16 @@ public class User {
         this.createdAt = createdAt;
     }
 
+    public User() {
+    }
+
+    public User(Long uid) {
+        this.uid = uid;
+    }    
+
+    public User(String spotifyId, String email, String username) {
+        this.spotifyId = spotifyId;
+        this.email = email;
+        this.username = username;
+    }
 }

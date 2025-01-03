@@ -1,15 +1,16 @@
 package com.minh.konverter.Model;
+
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "playlists")
+@Table(name = "playlists", uniqueConstraints = @UniqueConstraint(columnNames = {"title", "platform", "uid"}))
 public class Playlist {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "playlistid")
-    private int playlistId;
+    private Long playlistId;
 
     @Column(name = "title", nullable = false)
     private String title;
@@ -18,16 +19,17 @@ public class Playlist {
     private String platform;
 
     @Column(name = "uid", nullable = false)
-    private int userId;
+    private Long userId;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public int getPlaylistId() {
+    // Getters and Setters
+    public Long getPlaylistId() {
         return playlistId;
     }
 
-    public void setPlaylistId(int playlistId) {
+    public void setPlaylistId(Long playlistId) {
         this.playlistId = playlistId;
     }
 
@@ -47,11 +49,11 @@ public class Playlist {
         this.platform = platform;
     }
 
-    public int getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
